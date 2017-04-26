@@ -1,0 +1,72 @@
+# Welcome to Serverless!
+# This file is the main config file for your service.
+# It's very minimal at this point and uses default values.
+# You can always add more config options for more control.
+# We've included some commented out config examples here.
+# Just uncomment any of them to get that config option.
+#
+# For full config options, check the docs:
+#    docs.serverless.com
+#
+# Happy Coding!
+plugins:
+  - serverless-webpack
+
+service: shortlist-template
+
+
+provider:
+  name: aws
+  stage: dev
+  runtime: nodejs4.3
+  profile: shortlist-serverless-template-dev
+  environment:
+    DYNAMODB_TABLE: "candidate"
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}"
+
+    - Effect: Allow
+      Action:
+        - execute-api:Invoke
+      Resource: "arn:aws:execute-api:us-east-1:*:*"
+
+functions:
+
+  getAllCandidatesFunction:
+    handler: handler.getAllCandidatesFunction
+    events:
+      - http:
+          path: api/allcandidates
+          method: get
+          authorizer: arn:aws:lambda:us-east-1:917291829364:function:hr-auth-master-dev-authorize
+          resultTtlInSeconds: 0
+          cors: true
+#      - schedule:
+#          rate: rate(10 minutes)
+#          enabled: true
+
+
+resources:
+  Resources:
+     candidates:
+          Type: 'AWS::DynamoDB::Table'
+          DeletionPolicy: Retain
+          Properties:
+            TableName: ${self:provider.environment.DYNAMODB_TABLE}
+            AttributeDefinitions:
+              - AttributeName: candidateId
+                AttributeType: S
+            KeySchema:
+              - AttributeName: candidateId
+                KeyType: HASH
+            ProvisionedThroughput:
+              ReadCapacityUnits: 2
+              WriteCapacityUnits: 2
